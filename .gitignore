@@ -1,0 +1,19 @@
+# Go
+agent/agent
+*.exe
+*.test
+
+# Node
+server/node_modules/
+server/dist/
+
+# Env / secrets
+.env
+*.env.local
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
