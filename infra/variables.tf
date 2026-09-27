@@ -7,6 +7,6 @@ variable "project" {
 variable "location" {
   description = "Azure region to deploy into"
   type        = string
-  default     = "eastus"
+  default     = "eastasia"
 
 }
