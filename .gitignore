@@ -24,3 +24,6 @@ server/dist/
 *.tfstate.*
 *.tfvars
 crash.log
+tfplan
+*.tfplan
+crash.*.log

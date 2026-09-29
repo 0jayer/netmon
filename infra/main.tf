@@ -24,6 +24,9 @@ resource "azurerm_kubernetes_cluster" "main" {
   dns_prefix          = var.project
   sku_tier            = "Free"
 
+  oidc_issuer_enabled       = true
+  workload_identity_enabled = true
+
   default_node_pool {
     name           = "system"
     node_count     = 1
