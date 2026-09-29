@@ -32,7 +32,7 @@ This project exists specifically to build real, demonstrable experience with the
 
 - [x] **Terraform provider + resource group** — `azurerm` provider configured, authenticated via Azure CLI
 - [x] **Virtual network + subnet** — `netmon-vnet` (10.0.0.0/16) with a dedicated `aks-subnet` (10.0.1.0/24), deployed in `eastasia` (required by the Azure for Students region policy)
-- [ ] AKS cluster
+- [x] AKS cluster
 - [ ] Azure Container Registry
 - [ ] Azure Database for PostgreSQL
 - [ ] Key Vault + secrets
@@ -43,12 +43,11 @@ This project exists specifically to build real, demonstrable experience with the
 
 ## Next steps
 
-1. Provision the AKS cluster itself (the first resource in this project with a real, ongoing cost, a `Standard_B2s` node, $30/month if left running continuously)
-2. Provision ACR and Azure Database for PostgreSQL
-3. Provision Key Vault and wire up secrets
-4. Write the Helm chart(s) for the monitoring stack
-5. Set up GitHub Actions for automated build/deploy
-6. Simulate office computers as additional VMs in the same VNet, then extend with Tailscale to connect genuinely separate machines
+1. Provision ACR and Azure Database for PostgreSQL
+2. Provision Key Vault and wire up secrets
+3. Write the Helm chart(s) for the monitoring stack
+4. Set up GitHub Actions for automated build/deploy
+5. Simulate office computers as additional VMs in the same VNet, then extend with Tailscale to connect genuinely separate machines
 
 ## Cost management
 
