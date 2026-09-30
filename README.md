@@ -28,18 +28,21 @@ This project exists specifically to build real, demonstrable experience with the
 | CI/CD | GitHub Actions |
 | Networking | Azure VNet, NSGs, (planned) Tailscale for cross-network connectivity |
 
-## Progress so far
+## Progress 
 
-- [x] **Terraform provider + resource group** — `azurerm` provider configured, authenticated via Azure CLI
-- [x] **Virtual network + subnet** — `netmon-vnet` (10.0.0.0/16) with a dedicated `aks-subnet` (10.0.1.0/24), deployed in `eastasia` (required by the Azure for Students region policy)
-- [x] AKS cluster
-- [ ] Azure Container Registry
-- [ ] Azure Database for PostgreSQL
-- [ ] Key Vault + secrets
-- [ ] Helm chart for the monitoring stack
+- [x] **Terraform provider + resource group**: `azurerm` provider, authenticated via Azure CLI
+- [x] **Virtual network + subnets**: `netmon-vnet` (10.0.0.0/16) with `aks-subnet` (10.0.1.0/24) and a PostgreSQL-delegated `db-subnet` (10.0.2.0/24), deployed in `eastasia` (required by the Azure for Students region policy)
+- [x] **AKS cluster**: single-node, Free tier, Azure CNI overlay, OIDC issuer and workload identity enabled
+- [x] **Azure Container Registry**: Basic SKU, admin user disabled, AKS access through the `AcrPull` role
+- [x] **Azure Database for PostgreSQL**: Flexible Server (burstable B1ms) with private access only, plus a `grafana` database
+- [x] **Key Vault + secrets**: RBAC-authorized vault, database admin password stored as a secret
+- [x] **Prometheus + node_exporter + Grafana + Alertmanager, live**: deployed with the `kube-prometheus-stack` Helm chart (default values), dashboards verified in Grafana
+- [ ] Custom Helm values (alert rules, dashboards as code)
+- [ ] Grafana connected to PostgreSQL, with the password pulled from Key Vault through workload identity
 - [ ] GitHub Actions CI/CD pipeline
-- [ ] Prometheus + node_exporter + Grafana + Alertmanager, live
+- [ ] Simulated office machines as additional VMs in the same VNet, extended with Tailscale to connect genuinely separate machines
 - [ ] RBAC + network policy hardening
+
 
 ## Next steps
 
@@ -48,6 +51,25 @@ This project exists specifically to build real, demonstrable experience with the
 3. Write the Helm chart(s) for the monitoring stack
 4. Set up GitHub Actions for automated build/deploy
 5. Simulate office computers as additional VMs in the same VNet, then extend with Tailscale to connect genuinely separate machines
+
+## Running it
+ 
+```bash
+cd infra
+export TF_VAR_pg_admin_password='<choose a strong password>'
+terraform init
+terraform plan -out=tfplan
+terraform apply tfplan
+ 
+az aks get-credentials -g netmon-rg -n netmon-aks --overwrite-existing
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install kps prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+ 
+kubectl port-forward -n monitoring svc/kps-grafana 3000:80   # http://localhost:3000
+```
+ 
+Set `unique_suffix` in `terraform.tfvars` (lowercase letters and digits) so the ACR, PostgreSQL and Key Vault names are globally unique. `*.tfvars`, state files and saved plans are gitignored.
+
 
 ## Cost management
 
