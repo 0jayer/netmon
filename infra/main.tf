@@ -27,6 +27,12 @@ resource "azurerm_kubernetes_cluster" "main" {
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
+
+
+  key_vault_secrets_provider {
+    secret_rotation_enabled = false
+  }
+
   default_node_pool {
     name           = "system"
     node_count     = 1

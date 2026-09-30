@@ -1,0 +1,29 @@
+grafana:
+  serviceAccount:
+    create: true
+    name: kps-grafana
+    annotations:
+      azure.workload.identity/client-id: "__CLIENT_ID__"
+  podLabels:
+    azure.workload.identity/use: "true"
+  extraSecretMounts:
+    - name: secrets-store-inline
+      mountPath: /mnt/secrets-store
+      readOnly: true
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: grafana-kv
+  envValueFrom:
+    GF_DATABASE_PASSWORD:
+      secretKeyRef:
+        name: grafana-db
+        key: password
+  grafana.ini:
+    database:
+      type: postgres
+      host: "__PG_FQDN__:5432"
+      name: grafana
+      user: netmonadmin
+      ssl_mode: require
