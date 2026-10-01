@@ -27,3 +27,23 @@ grafana:
       name: grafana
       user: netmonadmin
       ssl_mode: require
+alertmanager:
+  alertmanagerSpec:
+    secrets:
+      - slack-webhook
+  config:
+    route:
+      receiver: slack
+      group_by: [alertname, instance]
+      routes:
+        - receiver: "null"
+          matchers:
+            - alertname =~ "Watchdog|InfoInhibitor"
+    receivers:
+      - name: "null"
+      - name: slack
+        slack_configs:
+          - api_url_file: /etc/alertmanager/secrets/slack-webhook/url
+            channel: "#alerts"
+            send_resolved: true
+
