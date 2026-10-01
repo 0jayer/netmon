@@ -46,11 +46,12 @@ This project exists specifically to build real, demonstrable experience with the
 
 ## Next steps
 
-1. Provision ACR and Azure Database for PostgreSQL
-2. Provision Key Vault and wire up secrets
-3. Write the Helm chart(s) for the monitoring stack
-4. Set up GitHub Actions for automated build/deploy
-5. Simulate office computers as additional VMs in the same VNet, then extend with Tailscale to connect genuinely separate machines
+1. Wire Grafana to the PostgreSQL database, pulling the credential from Key Vault (workload identity)
+2. Move the stack configuration into our own Helm values, including alert rules and provisioned dashboards
+3. Set up GitHub Actions for automated build/deploy (OIDC login to Azure)
+4. Add simulated monitored machines and connect them to Prometheus
+5. Harden with RBAC and network policies
+
 
 ## Running it
  
