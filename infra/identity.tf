@@ -28,3 +28,8 @@ resource "azurerm_role_assignment" "ci_acr_push" {
   role_definition_name = "AcrPush"
   principal_id         = data.azurerm_user_assigned_identity.ci.principal_id
 }
+resource "azurerm_role_assignment" "ci_aks_user" {
+  scope                = azurerm_kubernetes_cluster.main.id
+  role_definition_name = "Azure Kubernetes Service Cluster User Role"
+  principal_id         = data.azurerm_user_assigned_identity.ci.principal_id
+}
