@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: netmon-app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netmon-app
+  namespace: netmon-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netmon-app
+  template:
+    metadata:
+      labels:
+        app: netmon-app
+    spec:
+      containers:
+        - name: netmon-app
+          image: netmonacrojayer42.azurecr.io/netmon-app:1b576bb7f5fc7911915c9d080be826375c2351bf
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netmon-app
+  namespace: netmon-app
+spec:
+  selector:
+    app: netmon-app
+  ports:
+    - port: 80
+      targetPort: 8080
