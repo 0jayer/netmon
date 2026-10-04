@@ -17,3 +17,14 @@ resource "azurerm_role_assignment" "grafana_kv_secrets_user" {
   role_definition_name = "Key Vault Secrets User"
   principal_id         = azurerm_user_assigned_identity.grafana.principal_id
 }
+
+data "azurerm_user_assigned_identity" "ci" {
+  name                = "netmon-ci-identity"
+  resource_group_name = "netmon-persist-rg"
+}
+
+resource "azurerm_role_assignment" "ci_acr_push" {
+  scope                = azurerm_container_registry.main.id
+  role_definition_name = "AcrPush"
+  principal_id         = data.azurerm_user_assigned_identity.ci.principal_id
+}
