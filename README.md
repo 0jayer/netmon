@@ -27,12 +27,13 @@ This project exists to build real, demonstrable experience with the DevOps stack
 | Monitoring | Prometheus, node_exporter, Grafana, Alertmanager |
 | Alert delivery | Slack (incoming webhook) |
 | CI/CD | GitHub Actions, OIDC login to Azure (no stored passwords) |
-| Networking | Azure VNet, (planned) NSGs and Tailscale |
+| Networking | Azure VNet, subnets, NSG on the office subnet |
+| Simulated fleet | Ubuntu VMs (Azure), cloud-init |
 
 ## Progress
 
 - [x] **Terraform provider + resource group**: `azurerm` provider, authenticated via Azure CLI
-- [x] **Virtual network + subnets**: `netmon-vnet` (10.0.0.0/16) with `aks-subnet` (10.0.1.0/24) and a PostgreSQL-delegated `db-subnet` (10.0.2.0/24), in `eastasia` (required by the Azure for Students region policy)
+- [x] **Virtual network + subnets**: `netmon-vnet` (10.0.0.0/16) with `aks-subnet` (10.0.1.0/24), a PostgreSQL-delegated `db-subnet` (10.0.2.0/24) and `office-subnet` (10.0.3.0/24), in `eastasia` (required by the Azure for Students region policy)
 - [x] **AKS cluster**: single node, Free tier, Azure CNI overlay, OIDC issuer and workload identity enabled
 - [x] **Azure Container Registry**: Basic SKU, admin user disabled, AKS pulls through the `AcrPull` role
 - [x] **Azure Database for PostgreSQL**: Flexible Server (burstable B1ms), private access only, with a `grafana` database
@@ -44,8 +45,7 @@ This project exists to build real, demonstrable experience with the DevOps stack
 - [x] **CI**: GitHub Actions runs the unit tests and builds the Docker image for the sample app in `app/`
 - [x] **Push to ACR from CI**: OIDC login to Azure, image tagged with the commit SHA
 - [x] **Deploy to AKS from CI**: the app runs in its own namespace (`k8s/app.yaml`) and every push to `main` rolls out the new image
-- [ ] Simulated office machines as additional VMs in the same VNet, extended with Tailscale to connect separate machines
-- [ ] Hardening: least-privilege database user, RBAC, network policies, NSGs, Terraform remote state, persistent volumes for Prometheus
+- [x] **Simulated office machines**: two Ubuntu VMs (`Standard_B2ts_v2`) in `office-subnet`, behind an NSG that only lets the AKS subnet reach `node_exporter` on port 9100; installed at first boot by cloud-init and scraped by Prometheus through `k8s/office_scrape.yaml`. `NetmonHostDown` and `NetmonHighCPU` verified end to end in Slack
 
 ## How secrets reach Grafana
 
@@ -134,6 +134,11 @@ helm upgrade --install kps prometheus-community/kube-prometheus-stack \
 # 6. Alert rules (after Helm, because the operator creates the PrometheusRule type)
 kubectl apply -f k8s/alert_rules.yaml
 
+# 6b. Scrape the simulated office machines (after Helm, because the operator creates the ScrapeConfig type)
+sed "s/__TARGETS__/$(terraform -chdir=infra output -raw office_scrape_targets)/" \
+    k8s/office_scrape.yaml | kubectl apply -f -
+# check http://localhost:9090/targets (kubectl port-forward -n monitoring svc/kps-kube-prometheus-stack-prometheus 9090:9090)
+
 # 7. Sample app (the pod stays in ImagePullBackOff until CI pushes an image to the new registry)
 kubectl apply -f k8s/app.yaml
 # then push a commit that touches app/ or .github/workflows/ci.yml so CI builds, pushes and deploys
@@ -149,6 +154,30 @@ Check that Grafana is using PostgreSQL:
 ```bash
 kubectl logs -n monitoring deploy/kps-grafana -c grafana | grep dbtype
 ```
+
+## Simulated office machines
+
+`infra/vms.tf` creates `office_vm_count` Ubuntu 24.04 VMs (default 2, size `office_vm_size`) with fixed private IPs starting at 10.0.3.10, no public IP, and SSH password login disabled. `infra/cloud-init.yaml` installs `prometheus-node-exporter` and `stress-ng` on first boot, so there is no manual setup on the machines.
+
+The NSG on `office-subnet` allows port 9100 only from the AKS subnet, where Prometheus runs, and denies all other traffic from inside the VNet. There is no SSH access; use `az vm run-command` instead. `k8s/office_scrape.yaml` is a Prometheus `ScrapeConfig` whose job name ends in `node-exporter`, so the existing `NetmonHostDown` rule covers the new machines without changes. The `__TARGETS__` placeholder is filled from the `office_scrape_targets` Terraform output.
+
+The 2-VM default comes from the subscription's regional quota of 6 vCPUs: the AKS node uses 2 and each VM uses 2. A quota increase lets you raise `office_vm_count`. During an AKS upgrade a surge node needs 2 more vCPUs, so stop a VM first.
+
+Test the alerts:
+
+```bash
+# NetmonHostDown (fires after ~2 minutes)
+az vm run-command invoke -g netmon-rg -n netmon-office-2 --command-id RunShellScript \
+  --scripts "systemctl stop prometheus-node-exporter"
+az vm run-command invoke -g netmon-rg -n netmon-office-2 --command-id RunShellScript \
+  --scripts "systemctl start prometheus-node-exporter"
+
+# NetmonHighCPU (5-minute average above 80% for 5 minutes, so allow ~10 minutes)
+az vm run-command invoke -g netmon-rg -n netmon-office-1 --command-id RunShellScript \
+  --scripts "systemd-run --unit=cpustress stress-ng --cpu 2 --timeout 1200s"
+```
+
+In Grafana's Node Exporter dashboard, set the `job` filter to `office-node-exporter`; the default job shows only the AKS node.
 
 ## CI/CD
 
