@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: office-machines
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  jobName: office-node-exporter
+  scrapeInterval: 30s
+  staticConfigs:
+    - targets: [__TARGETS__]
+      labels:
+        fleet: office
